@@ -1,0 +1,4 @@
+interface:
+  display_name: "English Listening Video"
+  short_description: "Parchment listening videos with multi-voice narration"
+  default_prompt: "Create a one-hour English listening video with parchment background, centred subtitles and multiple voices"
