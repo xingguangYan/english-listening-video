@@ -17,6 +17,7 @@ import argparse
 import json
 import multiprocessing as mp
 import os
+import time
 import wave
 from pathlib import Path
 
@@ -40,9 +41,17 @@ def _synth(job: dict) -> tuple:
     lang = "b" if str(job["voice"]).startswith("b") else "a"
     pipe = _PIPES[lang]
     speed = float(job.get("speed", 1.0))
-    chunks = list(pipe(job["text"], voice=job["voice"], speed=speed))
+    chunks = []
+    for attempt in range(3):
+        try:
+            chunks = list(pipe(job["text"], voice=job["voice"], speed=speed))
+        except Exception:  # noqa: BLE001 - transient model hiccups get retried
+            chunks = []
+        if chunks:
+            break
+        time.sleep(1.0 + attempt)
     if not chunks:
-        raise RuntimeError(f"no audio generated for idx={job['idx']}")
+        raise RuntimeError(f"no audio generated for idx={job['idx']} after retries")
     audio = np.concatenate([np.asarray(c[2].cpu()).ravel() for c in chunks])
     arr = (np.clip(audio, -1.0, 1.0) * 32767).astype("<i2")
     with wave.open(str(out_path), "wb") as w:
