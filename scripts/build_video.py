@@ -31,6 +31,20 @@ SKILL_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_BG = SKILL_DIR / "assets" / "parchment.png"
 SKILL_SCRIPTS = SKILL_DIR / "scripts"
 
+import importlib.util as _ilu
+
+
+def _load_module(name: str):
+    spec = _ilu.spec_from_file_location(name, SKILL_SCRIPTS / f"{name}.py")
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_themes_mod = _load_module("themes")
+get_theme = _themes_mod.get_theme
+THEMES = _themes_mod.THEMES
+
 # Rotating cast: 12 Kokoro-82M English voices across two accents.
 # voice id -> on-screen accent label
 DEFAULT_VOICES = [
@@ -46,6 +60,21 @@ DEFAULT_VOICES = [
     ("am_eric", "American English · Eric"),
     ("bf_isabella", "British English · Isabella"),
     ("bm_lewis", "British English · Lewis"),
+    ("af_alloy", "American English · Alloy"),
+    ("af_aoede", "American English · Aoede"),
+    ("af_jessica", "American English · Jessica"),
+    ("af_kore", "American English · Kore"),
+    ("af_nova", "American English · Nova"),
+    ("af_river", "American English · River"),
+    ("af_sarah", "American English · Sarah"),
+    ("af_sky", "American English · Sky"),
+    ("am_echo", "American English · Echo"),
+    ("am_fenrir", "American English · Fenrir"),
+    ("am_liam", "American English · Liam"),
+    ("am_onyx", "American English · Onyx"),
+    ("am_puck", "American English · Puck"),
+    ("bf_lily", "British English · Lily"),
+    ("bm_fable", "British English · Fable"),
 ]
 
 WORK_TITLES = {
@@ -60,12 +89,6 @@ FONT_BOLD = ["georgiab.ttf", "timesbd.ttf", "DejaVuSerif-Bold.ttf", "FreeSerifBo
 
 ABBREV = ["Mr", "Mrs", "Ms", "Dr", "Prof", "Sr", "Jr", "St", "vs", "etc", "Co",
            "Inc", "Ltd", "Hon", "Rev", "Capt", "Lt", "Sgt", "Col", "Gen", "Esq"]
-
-TEXT_COLOR = (58, 42, 26)
-TITLE_COLOR = (66, 48, 30)
-SMALL_COLOR = (96, 72, 46)
-SHADOW_COLOR = (40, 28, 14)
-
 
 def find_font(candidates: List[str]) -> Path:
     here = Path("C:/Windows/Fonts")
@@ -375,19 +398,19 @@ def fit_text(text: str, font_path: Path, max_w: float, max_h: float,
     lines = wrap_text(text, font, max_w)
     return font, lines, len(lines) * min_size * gap
 
-
 def render_frame(bg: Image.Image, work: str, passage_title: str, text: str, label: str,
-                 fonts: dict, w: int, h: int) -> Image.Image:
+                 fonts: dict, w: int, h: int, colors: Optional[dict] = None) -> Image.Image:
+    colors = colors or get_theme("classic")
     img = bg.copy().convert("RGBA")
     draw = ImageDraw.Draw(img)
     inner = w - 2 * 220
     # small work label on top
-    draw_spaced(draw, work.upper(), fonts["small"], y=92, fill=SMALL_COLOR + (190,),
+    draw_spaced(draw, work.upper(), fonts["small"], y=92, fill=tuple(colors["small"]) + (190,),
                 spacing=5, center_w=w)
     # passage title
     if passage_title:
         draw_spaced(draw, passage_title.upper(), fonts["title"], y=150,
-                    fill=TITLE_COLOR + (220,), spacing=3, center_w=w)
+                    fill=tuple(colors["title"]) + (220,), spacing=3, center_w=w)
     # body: centred block
     body_font, lines, block_h = fit_text(
         text, fonts["body_path"], inner, h * 0.56, min_size=30, max_size=52
@@ -396,26 +419,27 @@ def render_frame(bg: Image.Image, work: str, passage_title: str, text: str, labe
     y = 560 - block_h / 2
     for line in lines:
         x = (w - body_font.getlength(line)) / 2
-        draw.text((x, y + 2), line, font=body_font, fill=SHADOW_COLOR + (60,))
-        draw.text((x, y), line, font=body_font, fill=TEXT_COLOR + (245,))
+        draw.text((x, y + 2), line, font=body_font, fill=tuple(colors["shadow"]) + (60,))
+        draw.text((x, y), line, font=body_font, fill=tuple(colors["text"]) + (245,))
         y += lh
     # accent label at the bottom
     if label:
-        draw_spaced(draw, label, fonts["bottom"], y=h - 96, fill=SMALL_COLOR + (170,),
+        draw_spaced(draw, label, fonts["bottom"], y=h - 96, fill=tuple(colors["small"]) + (170,),
                     spacing=2, center_w=w)
     return img.convert("RGB")
 
 
 def render_intro_frame(bg: Image.Image, fonts: dict, w: int, h: int, title: str,
-                       subtitle: str) -> Image.Image:
+                       subtitle: str, colors: Optional[dict] = None) -> Image.Image:
+    colors = colors or get_theme("classic")
     img = bg.copy().convert("RGBA")
     draw = ImageDraw.Draw(img)
     f1 = ImageFont.truetype(str(fonts["title_path"]), 88)
     f2 = ImageFont.truetype(str(fonts["body_path"]), 40)
     tlen = f1.getlength(title)
-    draw.text(((w - tlen) / 2, h / 2 - 110), title, font=f1, fill=TITLE_COLOR + (240,))
+    draw.text(((w - tlen) / 2, h / 2 - 110), title, font=f1, fill=tuple(colors["title"]) + (240,))
     slen = f2.getlength(subtitle)
-    draw.text(((w - slen) / 2, h / 2 + 20), subtitle, font=f2, fill=SMALL_COLOR + (200,))
+    draw.text(((w - slen) / 2, h / 2 + 20), subtitle, font=f2, fill=tuple(colors["small"]) + (200,))
     return img.convert("RGB")
 
 
@@ -446,9 +470,11 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--content", nargs="*", default=None, help="txt files; default corpus/*.txt")
     ap.add_argument("--minutes", type=float, default=60.0)
     ap.add_argument("--out", default="out/english-listening.mp4")
-    ap.add_argument("--bg", default=str(DEFAULT_BG))
+    ap.add_argument("--bg", default=None, help="background image; omit to use the theme paper")
     ap.add_argument("--width", type=int, default=1920)
     ap.add_argument("--height", type=int, default=1080)
+    ap.add_argument("--theme", default="classic", choices=sorted(THEMES),
+                    help="scene theme: colours the generated paper and the subtitle ink")
     ap.add_argument("--voices", default=",".join(v for v, _ in DEFAULT_VOICES),
                     help="comma-separated kokoro voice ids")
     ap.add_argument("--speed", type=float, default=1.0, help="kokoro speech speed")
@@ -475,10 +501,25 @@ def main() -> None:
     for d in (audio_dir, frame_dir, seg_dir):
         d.mkdir(exist_ok=True)
 
-    bg_path = Path(args.bg)
-    if not bg_path.exists():
-        raise SystemExit(f"background image not found: {bg_path}")
+    if args.bg:
+        bg_path = Path(args.bg)
+        if not bg_path.exists():
+            raise SystemExit(f"background image not found: {bg_path}")
+    elif args.theme == "classic" and DEFAULT_BG.exists():
+        bg_path = DEFAULT_BG
+    else:
+        # no explicit background: generate a themed paper on the fly
+        make_parchment = _load_module("make_parchment")
+        bg_path = tmp / f"bg_{args.theme}.png"
+        if not bg_path.exists():
+            seed = sum(ord(c) for c in args.theme) % 997
+            make_parchment.generate(args.width, args.height, seed, args.theme).save(bg_path)
+            print(f"[bg  ] generated themed background ({args.theme}) -> {bg_path}")
     bg = Image.open(bg_path).convert("RGB").resize((args.width, args.height))
+
+    theme = get_theme(args.theme)
+    colors = {"text": theme["text"], "title": theme["title"],
+              "small": theme["small"], "shadow": theme["shadow"]}
 
     fonts = {
         "small": load_font(FONT_BODY, 28),
@@ -535,7 +576,7 @@ def main() -> None:
     if args.preview_frame is not None:
         seg = planned[min(args.preview_frame, len(planned) - 1)]
         frame = render_frame(bg, seg.work, seg.passage_title, seg.text, seg.label,
-                             fonts, args.width, args.height)
+                             fonts, args.width, args.height, colors)
         outp = tmp / f"preview_{args.preview_frame:04d}.png"
         frame.save(outp)
         print(f"preview -> {outp}")
@@ -569,7 +610,7 @@ def main() -> None:
         s.frame = frame_dir / f"{s.idx:04d}.png"
         if not s.frame.exists():
             frame = render_frame(bg, s.work, s.passage_title, s.text, s.label,
-                                 fonts, args.width, args.height)
+                                 fonts, args.width, args.height, colors)
             frame.save(s.frame, compress_level=4)
         s.video = seg_dir / f"{s.idx:04d}.mp4"
         if not (s.video.exists() and s.video.stat().st_size > 5000):
@@ -586,7 +627,7 @@ def main() -> None:
     if not args.no_intro:
         subtitle = args.subtitle or f"{args.minutes:g} minutes · {len(set(s.voice for s in planned))} voices · centred subtitles"
         card = tmp / "intro_card.png"
-        render_intro_frame(bg, fonts, args.width, args.height, args.title, subtitle).save(card)
+        render_intro_frame(bg, fonts, args.width, args.height, args.title, subtitle, colors).save(card)
         intro = seg_dir / "intro.mp4"
         if not intro.exists():
             make_intro(card, 6.0, 24, intro)

@@ -26,6 +26,15 @@ CATALOG = {
     902: "happy-prince.txt",       # The Happy Prince and Other Tales (Wilde)
     1661: "sherlock-holmes.txt",   # The Adventures of Sherlock Holmes
 }
+CATALOG_EXTRA = {
+    11: "alice-in-wonderland.txt",     # Alice's Adventures in Wonderland
+    120: "treasure-island.txt",        # Treasure Island
+    271: "black-beauty.txt",           # Black Beauty
+    215: "call-of-the-wild.txt",       # The Call of the Wild
+    205: "walden.txt",                 # Walden
+    1342: "pride-and-prejudice.txt",   # Pride and Prejudice
+}
+CATALOG.update(CATALOG_EXTRA)
 
 URL = "https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt"
 # Alternative mirrors in case gutenberg.org is slow/blocked.
@@ -42,6 +51,14 @@ START_MARKERS = {
     902: "HIGH above the city, on a tall column",       # The Happy Prince
     1661: "I had seen little of Holmes lately",         # A Scandal in Bohemia
 }
+START_MARKERS.update({
+    11: "Alice was beginning to get very tired",        # Down the Rabbit-Hole
+    120: "Squire Trelawney, Dr. Livesey, and the rest", # The Old Sea-dog
+    271: "The first place that I can well remember",    # Black Beauty
+    215: "Buck did not read the newspapers",            # Into the Primitive
+    205: "When I wrote the following pages",            # Walden, Economy
+    1342: "It is a truth universally acknowledged",     # Pride and Prejudice
+})
 
 HEADER_RE = re.compile(r"\*\*\*\s*(START|BEGINNING)[^\n]*\*\*\*", re.I)
 FOOTER_RE = re.compile(r"\*\*\*\s*END\s+OF[^\n]*\*\*\*", re.I)
