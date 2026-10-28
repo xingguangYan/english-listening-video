@@ -656,6 +656,7 @@ def main() -> None:
         "duration_seconds": round(cursor, 2),
         "duration_minutes": round(cursor / 60, 2),
         "target_minutes": args.minutes,
+        "theme": args.theme,
         "segments": len(planned),
         "voices": sorted(set(s.voice for s in planned)),
         "accents": label_set,
