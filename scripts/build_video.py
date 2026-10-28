@@ -480,6 +480,8 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--speed", type=float, default=1.0, help="kokoro speech speed")
     ap.add_argument("--pad", type=float, default=0.45, help="silence after each sentence")
     ap.add_argument("--workers", type=int, default=6, help="ffmpeg/frame workers")
+    ap.add_argument("--fps", type=int, default=24,
+                    help="video frame rate; static slides look the same at 8-12 fps")
     ap.add_argument("--tts-workers", type=int, default=4, help="kokoro worker processes")
     ap.add_argument("--tts-threads", type=int, default=6, help="torch threads per tts worker")
     ap.add_argument("--tts-python", default=None, help="interpreter with kokoro; auto-detected")
@@ -614,7 +616,7 @@ def main() -> None:
             frame.save(s.frame, compress_level=4)
         s.video = seg_dir / f"{s.idx:04d}.mp4"
         if not (s.video.exists() and s.video.stat().st_size > 5000):
-            encode_segment(s.frame, s.audio, s.dur, args.pad, s.video, 24)
+            encode_segment(s.frame, s.audio, s.dur, args.pad, s.video, args.fps)
         return s.video
 
     print(f"[render+encode] {len(planned)} segments with {args.workers} workers")
@@ -630,7 +632,7 @@ def main() -> None:
         render_intro_frame(bg, fonts, args.width, args.height, args.title, subtitle, colors).save(card)
         intro = seg_dir / "intro.mp4"
         if not intro.exists():
-            make_intro(card, 6.0, 24, intro)
+            make_intro(card, 6.0, args.fps, intro)
         parts.append(intro)
         intro_dur = 6.0
 

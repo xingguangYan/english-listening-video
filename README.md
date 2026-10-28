@@ -39,7 +39,7 @@ male and female (the full Kokoro-82M English set; `--voices` picks any subset).
 
 ## Themes
 
-Ten parchment scenes ship in `scripts/themes.py`, each with its own paper,
+Twenty parchment scenes ship in `scripts/themes.py`, each with its own paper,
 ink and vignette colours (all pairs meet WCAG AA contrast):
 
 | theme | scene |
@@ -54,6 +54,16 @@ ink and vignette colours (all pairs meet WCAG AA contrast):
 | frost | icy pale blue |
 | forest | sage green |
 | regency | soft blush paper |
+| autumn | warm amber paper |
+| ink | paper white, black ink |
+| linen | warm ivory |
+| plum | dusty plum |
+| sage | soft sage |
+| sky | pale sky |
+| copper | burnished copper |
+| charcoal | charcoal board, cream ink |
+| seafoam | deep sea green, pale ink |
+| wine | deep wine, blush ink |
 
 Omit `--bg` and the theme paper is generated on the fly. Pass an explicit
 `--bg` image to use any background you like.
@@ -86,6 +96,7 @@ python scripts/make_collection.py --out out/collection --minutes 63
 ```
 
 Useful flags: `--content` (pick works and order), `--voices`, `--theme`,
+`--fps` (static slides look identical at 8-12 fps and encode much faster),
 `--speed`, `--pad` (inter-sentence pause), `--bg` (background image),
 `--preview-frame N` (check the layout of one frame). Voices are documented in
 [references/voices.md](references/voices.md).
