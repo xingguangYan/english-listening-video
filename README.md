@@ -20,15 +20,43 @@ minutes, fully offline (TTS runs locally with Kokoro-82M).
 
 ## Content
 
-Public-domain English, interleaved for variety:
+Public-domain English, interleaved for variety. `fetch_corpus.py` ships a
+catalog of ten works:
 
 - Aesop's Fables (Gutenberg #28)
 - The Happy Prince and Other Tales - Oscar Wilde (Gutenberg #902)
 - Grimms' Fairy Tales (Gutenberg #2591)
+- Alice's Adventures in Wonderland (Gutenberg #11)
+- Treasure Island (Gutenberg #120)
+- Black Beauty (Gutenberg #271)
+- The Call of the Wild (Gutenberg #215)
+- Walden (Gutenberg #205)
+- Pride and Prejudice (Gutenberg #1342)
+- The Adventures of Sherlock Holmes (Gutenberg #1661)
 
-Twelve voices rotate across the video: American and British English, male and
-female (Kokoro-82M: af_heart, am_adam, bf_emma, bm_george, af_bella,
-am_michael, bf_alice, bm_daniel, af_nicole, am_eric, bf_isabella, bm_lewis).
+Up to 28 English voices rotate across a video: American and British English,
+male and female (the full Kokoro-82M English set; `--voices` picks any subset).
+
+## Themes
+
+Ten parchment scenes ship in `scripts/themes.py`, each with its own paper,
+ink and vignette colours (all pairs meet WCAG AA contrast):
+
+| theme | scene |
+|-------|-------|
+| classic | warm aged parchment |
+| midnight | deep blue night |
+| rose | dusty rose |
+| fog | grey mist |
+| sea | teal ocean |
+| dream | lavender dusk |
+| earth | warm brown |
+| frost | icy pale blue |
+| forest | sage green |
+| regency | soft blush paper |
+
+Omit `--bg` and the theme paper is generated on the fly. Pass an explicit
+`--bg` image to use any background you like.
 
 ## Requirements
 
@@ -47,12 +75,18 @@ python scripts/fetch_corpus.py --out corpus
 # 2. build a video (one hour by default)
 python scripts/build_video.py --minutes 60 --out out/english-listening-1hour.mp4
 
+# pick a scene theme (default: classic)
+python scripts/build_video.py --minutes 60 --theme midnight --out out/night.mp4
+
 # quick smoke test
 python scripts/build_video.py --minutes 1 --out out/smoke.mp4
+
+# build a whole themed collection: one episode per catalog work
+python scripts/make_collection.py --out out/collection --minutes 63
 ```
 
-Useful flags: `--content` (pick works and order), `--voices`, `--speed`,
-`--pad` (inter-sentence pause), `--bg` (background image),
+Useful flags: `--content` (pick works and order), `--voices`, `--theme`,
+`--speed`, `--pad` (inter-sentence pause), `--bg` (background image),
 `--preview-frame N` (check the layout of one frame). Voices are documented in
 [references/voices.md](references/voices.md).
 
