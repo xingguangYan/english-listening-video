@@ -22,6 +22,11 @@ import wave
 from pathlib import Path
 
 
+import re
+
+# A sentence needs at least one letter or digit for Kokoro to vocalize it.
+_SPEAKABLE = re.compile(r"[A-Za-z0-9]")
+
 def _worker_init(threads: int) -> None:
     global _PIPES
     os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
@@ -38,13 +43,24 @@ def _synth(job: dict) -> tuple:
     out_path = Path(job["out"])
     if out_path.exists() and out_path.stat().st_size > 2000:
         return job["idx"], "skip", 0.0
+    text = str(job.get("text", ""))
+    if not _SPEAKABLE.search(text):
+        # Symbol-only lines (e.g. "* * * * *" scene breaks) produce no audio
+        # from Kokoro; render a short pause instead of failing the whole run.
+        arr = np.zeros(int(24000 * 1.5), dtype="<i2")
+        with wave.open(str(out_path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(arr.tobytes())
+        return job["idx"], "ok", len(arr) / 24000.0
     lang = "b" if str(job["voice"]).startswith("b") else "a"
     pipe = _PIPES[lang]
     speed = float(job.get("speed", 1.0))
     chunks = []
     for attempt in range(3):
         try:
-            chunks = list(pipe(job["text"], voice=job["voice"], speed=speed))
+            chunks = list(pipe(text, voice=job["voice"], speed=speed))
         except Exception:  # noqa: BLE001 - transient model hiccups get retried
             chunks = []
         if chunks:
