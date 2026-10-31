@@ -95,6 +95,28 @@ python scripts/build_video.py --minutes 1 --out out/smoke.mp4
 python scripts/make_collection.py --out out/collection --minutes 63
 ```
 
+Slow sleep episodes: cut the speech rate, lengthen the inter-sentence pause
+and slow the theme down, then optionally lay a soft ambient bed under it.
+
+```bash
+# 2-hour slow episode (about 80 % speaking rate, 0.8 s pauses)
+python scripts/build_video.py --minutes 120 --speed 0.8 --pad 0.8 \
+    --theme dream --voices af_alloy,af_nova,af_river,am_liam \
+    --content corpus/simple-stories.txt --out out/sleep.mp4
+
+# mood-following ambient bed: reads the manifest, assigns a chord mood per
+# story section (night / water / forest / warm / tender) and renders one
+# continuous stereo WAV as long as the video
+python scripts/make_ambient.py out/sleep.manifest.json out/ambient.wav
+
+# mix the bed under the narration (low volume, band-limited so the speech
+# stays clear, fades in/out, limited so nothing clips)
+ffmpeg -y -i out/sleep.mp4 -i out/ambient.wav -filter_complex \
+    "[1:a]highpass=f=55,lowpass=f=2400,volume=0.11,afade=t=in:st=0:d=25,afade=t=out:st=END-45:d=45[bed];\
+[0:a][bed]amix=inputs=2:duration=first:normalize=0[mix];[mix]alimiter=limit=0.98[a]" \
+    -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k out/sleep-music.mp4
+```
+
 Useful flags: `--content` (pick works and order), `--voices`, `--theme`,
 `--fps` (static slides look identical at 8-12 fps and encode much faster),
 `--speed`, `--pad` (inter-sentence pause), `--bg` (background image),
@@ -110,7 +132,9 @@ Useful flags: `--content` (pick works and order), `--voices`, `--theme`,
    speech (Kokoro), renders one parchment frame (PIL), and encodes a short
    mp4 (ffmpeg). Segments are concatenated into the final video, and the
    SRT/manifest/thumbnail are written.
-3. All steps are resumable: cached audio, frames and segments are reused, so
+3. `make_ambient.py` synthesises a slow sine-pad ambient track that follows
+   the story mood of a finished episode, for sleep-style background music.
+4. All steps are resumable: cached audio, frames and segments are reused, so
    re-runs after a failure or a tweak are cheap.
 
 ## Credits and licensing
