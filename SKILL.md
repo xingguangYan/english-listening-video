@@ -52,7 +52,16 @@ to GitHub and attaching the video as a Release asset.
 ## Notes
 
 - Content is public domain; keep attribution in the manifest and description.
-- If Kokoro is unavailable, any other TTS can be wired in by replacing the
+- Mandarin is supported with the same engine: add `pypinyin jieba cn2an
+  ordered-set` to the kokoro interpreter and run `scripts/tts_kokoro_zh.py`
+  with a jobs JSONL (voice ids `zf_xiaobei zf_xiaoni zf_xiaoxiao zf_xiaoyi
+  zm_yunjian zm_yunxi zm_yunxia zm_yunyang`). Bilingual phrase videos
+  (English -> slow English -> Chinese -> English) work well with it.
+- Never trim TTS audio with `silenceremove` around -38dB: its windowed RMS
+  detection eats the soft onset and trailing decay of words, so every
+  sentence sounds cut short. Keep the wavs whole, or use `--trim-silence`
+  which measures speech samplewise at -70dB and cuts with `atrim`.
+  If Kokoro is unavailable, any other TTS can be wired in by replacing the
   `run_kokoro_tts` call; the rest of the pipeline is TTS-agnostic (it just
   needs one wav + duration per sentence).
 - Long sentences auto-shrink to fit; sentences under 4 words are merged so

@@ -48,3 +48,20 @@ If Kokoro is missing and the network allows it, edge-tts (Microsoft's free
 neural TTS, 40+ English voices) is the easiest alternative; note it needs
 unblocked websocket access to `speech.platform.bing.com`. Local spaCy model
 `en_core_web_sm` is required by misaki for the AmericanEnglish G2P path.
+
+
+## Mandarin voices (8)
+
+The same Kokoro-82M weights ship Mandarin voices: z = Mandarin, /m =
+female/male. They need a few extra packages in the kokoro interpreter
+(pypinyin jieba cn2an ordered-set) and are synthesized with
+scripts/tts_kokoro_zh.py (lang_code z):
+
+- zf_xiaobei - Mandarin, female
+- zf_xiaoni - Mandarin, female
+- zf_xiaoxiao - Mandarin, female
+- zf_xiaoyi - Mandarin, female
+- zm_yunjian - Mandarin, male
+- zm_yunxi - Mandarin, male
+- zm_yunxia - Mandarin, male
+- zm_yunyang - Mandarin, male

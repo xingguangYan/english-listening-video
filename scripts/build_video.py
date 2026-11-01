@@ -20,14 +20,41 @@ import re
 import subprocess
 import sys
 import time
+import wave
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
+import numpy as np
+
 from PIL import Image, ImageDraw, ImageFont
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
+TRIM_SILENCE = False  # set from --trim-silence; safe speech-boundary trimming
+SPEECH_THRESH = 10 ** (-70 / 20)  # -38dB silenceremove eats soft word tails
+
+
+def speech_bounds(path: Path) -> tuple[float, float]:
+    """Locate real speech samplewise; keep everything above -70dB plus margins.
+
+    ffmpeg's silenceremove uses windowed RMS and chews on the soft onset and
+    trailing decay of words (audibly clipping sentence ends), so measure with
+    plain sample peaks and cut with atrim instead.
+    """
+    with wave.open(str(path), "rb") as w:
+        n, sr, nch = w.getnframes(), w.getframerate(), w.getnchannels()
+        x = np.frombuffer(w.readframes(n), dtype=np.int16).astype(np.float32) / 32768.0
+    if nch == 2:
+        x = x.reshape(-1, 2).mean(axis=1)
+    idx = np.flatnonzero(np.abs(x) > SPEECH_THRESH)
+    if not idx.size:
+        return 0.0, n / sr
+    start = max(0.0, idx[0] / sr - 0.05)
+    end = min(n / sr, idx[-1] / sr + 0.06)
+    if end - start < 0.25:
+        return 0.0, n / sr
+    return start, end
 DEFAULT_BG = SKILL_DIR / "assets" / "parchment.png"
 SKILL_SCRIPTS = SKILL_DIR / "scripts"
 
@@ -320,10 +347,16 @@ def probe_duration(path: Path) -> float:
 
 def encode_segment(frame: Path, audio: Path, dur: float, pad: float, out: Path, fps: int) -> None:
     total = max(dur + pad, 0.4)
+    af = f"apad=pad_dur={pad}"
+    if TRIM_SILENCE:
+        start, end = speech_bounds(audio)
+        af = (f"atrim=start={start:.4f}:end={end:.4f},asetpts=PTS-STARTPTS,"
+              f"apad=pad_dur={pad}")
+        total = max(end - start + pad, 0.4)
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
            "-loop", "1", "-framerate", str(fps), "-i", str(frame),
            "-i", str(audio),
-           "-af", f"apad=pad_dur={pad}",
+           "-af", af,
            "-t", f"{total:.3f}",
            "-c:v", "libx264", "-tune", "stillimage", "-preset", "veryfast", "-crf", "30",
            "-pix_fmt", "yuv420p",
@@ -487,6 +520,8 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--tts-python", default=None, help="interpreter with kokoro; auto-detected")
     ap.add_argument("--tmp", default=None)
     ap.add_argument("--no-intro", action="store_true")
+    ap.add_argument("--trim-silence", action="store_true",
+                   help="trim leading/trailing wav silence samplewise (-70dB) for tighter pacing")
     ap.add_argument("--title", default="English Listening Practice")
     ap.add_argument("--subtitle", default=None)
     ap.add_argument("--preview-frame", type=int, default=None,
@@ -496,6 +531,8 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    global TRIM_SILENCE
+    TRIM_SILENCE = getattr(args, "trim_silence", False)
     t0 = time.time()
     tmp = Path(args.tmp) if args.tmp else Path(args.out).with_suffix("") / "_build"
     tmp.mkdir(parents=True, exist_ok=True)
